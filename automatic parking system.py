@@ -4,202 +4,217 @@ import csv
 
 #All the available spots in car parking are imported from config.py
 
-car_slots = {}
-for i in range(1, config.total_car_slots + 1):
-    car_slots[i] = None
-car_details = {}
-car_parked_time = {}
+parking_slots = {}
 
+for floor in config.parking_structure["floors"]:
+    parking_slots[floor] = {}
 
-#All the available spots in bike parking are imported from config.py
+    for section in config.parking_structure["floors"][floor]:
+        parking_slots[floor][section] = {}
 
-bike_slots = {}
-for i in range(1, config.total_bike_slots + 1):
-    bike_slots[i] = None
-bike_details = {}
-bike_parked_time = {}
+        for vehicle, capacity in config.parking_structure["floors"][floor][section].items():
+            parking_slots[floor][section][vehicle] = {}
+
+            for slot in range(1, capacity + 1):
+                parking_slots[floor][section][vehicle][slot] = None
+
+parking_details = {}
+parking_parked_time = {}
 
 def main_menu():
-    choice = input("Type 'park' if you want to park the vehicle or type 'exit' if you want to exit : ")
+    choice = input("Type 'park' if you want to park the vehicle or type 'exit' if you want to exit : ").strip().lower()
     return choice
 
-def save_car_parking():
-    with open("car_parking.csv", "w", newline="") as file:
+def save_parking():
+    with open("parking.csv", "w", newline = "") as file:
         writer = csv.writer(file)
-        for slot in car_details:
-            brand, model, licence_plate = car_details[slot]
-            parked_time_str = car_parked_time[slot].strftime("%Y-%m-%d %H-%M-%S")
-            writer.writerow([slot, brand, model, licence_plate, parked_time_str])
 
-def save_bike_parking():
-    with open("bike_parking.csv", "w", newline="") as file:
-        writer = csv.writer(file)
-        for slot in bike_details:
-            brand, model, licence_plate = bike_details[slot]
-            parked_time_str = bike_parked_time[slot].strftime("%Y-%m-%d %H-%M-%S")
-            writer.writerow([slot, brand, model, licence_plate, parked_time_str])
+        for parking_key, details in parking_details.items():
+            floor, section, vehicle, slot = parking_key
+            brand, model, licence_plate = details
 
-def load_car_parking():
+            parked_time_str = parking_parked_time[parking_key].strftime("%Y-%m-%d %H:%M:%S")
+
+            writer.writerow([
+                floor, section, vehicle, slot,
+                brand, model, licence_plate, parked_time_str
+            ])
+
+def load_parking():
     try:
-        with open("car_parking.csv", "r", newline = "") as file:
+        with open("parking.csv", "r", newline = "") as file:
             reader = csv.reader(file)
-            for row in reader:
-                slot_number = int(row[0])
-                brand = row[1]
-                model = row[2]
-                licence_plate = row[3]
-                parked_time_str = row[4]
-                parked_time = datetime.datetime.strptime(parked_time_str, "%Y-%m-%d %H-%M-%S")
-                car_slots[slot_number] = "occupied"
-                car_details[slot_number] = (brand, model, licence_plate)
-                car_parked_time[slot_number] = parked_time
-    except FileNotFoundError:
-        pass
 
-def load_bike_parking():
-    try:
-        with open("bike_parking.csv", "r", newline = "") as file:
-            reader = csv.reader(file)
             for row in reader:
-                slot_number = int(row[0])
-                brand = row[1]
-                model = row[2]
-                licence_plate = row[3]
-                parked_time_str = row[4]
-                parked_time = datetime.datetime.strptime(parked_time_str, "%Y-%m-%d %H-%M-%S")
-                bike_slots[slot_number] = "occupied"
-                bike_details[slot_number] = (brand, model, licence_plate)
-                bike_parked_time[slot_number] = parked_time
+                floor = row[0]
+                section = row[1]
+                vehicle = row[2]
+                slot = int(row[3])
+                brand = row[4]
+                model = row[5]
+                licence_plate = row[6]
+
+                parked_time = datetime.datetime.strptime(
+                    row[7], "%Y-%m-%d %H:%M:%S"
+                )
+
+                parking_key = (floor, section, vehicle, slot)
+
+                parking_slots[floor][section][vehicle][slot] = "occupied"
+
+                parking_details[parking_key] = (
+                    brand, model, licence_plate
+                )
+
+                parking_parked_time[parking_key] = parked_time
+
     except FileNotFoundError:
         pass
 
 def park_vehicle():
-    vehicle_type = input("Enter the type vehicle you want to park (car/bike) : ")
-    if vehicle_type == "car":
-        free_slot = None
-        for slot in car_slots:
-            if car_slots[slot] is None:
-                free_slot = slot
-                break
-        if free_slot is not None:
-            brand = input("Enter your car's brand : ")
-            model = input("Enter your car's model : ")
-            licence_plate = (input("Enter your car's licence plate number : ")).strip().upper()
+    vehicle_type = input("Enter the type of vehicle you want to park (car/bike): ").strip().lower()
 
-            car_d_tuple = (brand, model, licence_plate)
-            car_details[free_slot] = car_d_tuple
-
-            car_slots[free_slot] = "occupied"
-
-            car_parked_time[free_slot] = datetime.datetime.now()
-
-            print(f"Ticket : Car parked in slot {free_slot}. Brand : {brand}. Model : {model}. Licence plate number : {licence_plate}")
-            save_car_parking()
-
-        else:
-            print("Parking full")
-
-    elif vehicle_type == "bike":
-        free_slot = None
-        for slot in bike_slots:
-            if bike_slots[slot] is None:
-                free_slot = slot
-                break
-        if free_slot is not None:
-            brand = input("Enter your bike's brand : ")
-            model = input("Enter your bike's model : ")
-            licence_plate = (input("Enter your bike's licence plate number : ")).strip().upper()
-
-            bike_d_tuple = (brand, model, licence_plate)
-            bike_details[free_slot] = bike_d_tuple
-
-            bike_slots[free_slot] = "occupied"
-
-            bike_parked_time[free_slot] = datetime.datetime.now()
-
-            print(f"Ticket : Bike parked in slot {free_slot}. Brand : {brand}. Model : {model}. Licence plate number : {licence_plate}")
-            save_bike_parking()
-
-        else:
-            print("Parking full")
-    else:
+    if vehicle_type not in ["car", "bike"]:
         print("Invalid input")
+        return
+
+    free_floor = None
+    free_section = None
+    free_vehicle = None
+    free_slot = None
+
+    # Search for an available parking slot
+    for floor in parking_slots:
+        for section in parking_slots[floor]:
+            for vehicle in parking_slots[floor][section]:
+
+                if vehicle == vehicle_type:
+                    for slot in parking_slots[floor][section][vehicle]:
+
+                        if parking_slots[floor][section][vehicle][slot] is None:
+                            free_floor = floor
+                            free_section = section
+                            free_vehicle = vehicle
+                            free_slot = slot
+                            break
+
+                    if free_slot is not None:
+                        break
+
+            if free_slot is not None:
+                break
+
+        if free_slot is not None:
+            break
+
+    # Check parking availability
+    if free_slot is not None:
+
+        brand = input("Enter vehicle brand: ")
+        model = input("Enter vehicle model: ")
+        licence_plate = input("Enter vehicle licence plate number: ").strip().upper()
+
+        parking_key = (free_floor, free_section, free_vehicle, free_slot)
+
+        parking_details[parking_key] = (brand, model, licence_plate)
+
+        parking_slots[free_floor][free_section][free_vehicle][free_slot] = "occupied"
+
+        parking_parked_time[parking_key] = datetime.datetime.now()
+
+        save_parking()
+
+        # Generate parking ticket
+        print("\n========== PARKING TICKET ==========")
+        print(f"Vehicle Type : {free_vehicle}")
+        print(f"Floor        : {free_floor}")
+        print(f"Section      : {free_section}")
+        print(f"Slot Number  : {free_slot}")
+        print(f"Brand        : {brand}")
+        print(f"Model        : {model}")
+        print(f"Licence Plate: {licence_plate}")
+        print("====================================")
+        print("Vehicle parked successfully!")
+
+    else:
+        print("Parking full")
 
 def exit_vehicle():
-    vehicle_type = input("Enter the type vehicle you want to exit (car/bike) : ")
-    if vehicle_type == "car":
-        while True:
-            exit_plate = input("Enter the car's licence plate number : ").strip().upper()
-            slot_number = None
-            for slot in car_details:
-                if car_details[slot][2] == exit_plate:
-                    slot_number = slot
-                    break
-            if slot_number is not None:
-                elapsed_seconds = (datetime.datetime.now() - car_parked_time[slot_number]).total_seconds()
-                elapsed_hours = elapsed_seconds / 3600
-                if elapsed_hours <= 1:
-                    amount = config.first_hour_rate
-                    print(f"The amount to be paid is : {amount}")
-                else:
-                    amount = config.first_hour_rate + int(elapsed_hours - 1) * config.per_hour_rate
-                    print(f"The amount to be paid is : {amount}")
+    vehicle_type = input("Enter the type vehicle you want to exit (car/bike) : ").strip().lower()
 
-                with open("report.csv", "a", newline = "") as file:
-                    writer = csv.writer(file)
-                    brand, model, licence_plate = car_details[slot_number]
-                    writer.writerow(["car", slot_number, brand, model, licence_plate,
-                                     car_parked_time[slot_number].strftime("%Y-%m-%d %H-%M-%S"),
-                                     datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S"), amount])
+    if vehicle_type not in ["car", "bike"]:
+        print("Invalid vehicle type")
+        return
 
-                car_slots[slot_number] = None
-                del car_details[slot_number]
-                del car_parked_time[slot_number]
-                save_car_parking()
-                print("Thank you for using our parking!")
-                break
-            else:
-                print("No car with this licence plate was found")
+    exit_plate = input("Enter vehicle licence plate number: ").strip().upper()
 
-    elif vehicle_type == "bike":
-        while True:
-            exit_plate = input("Enter the bike's licence plate number : ").strip().upper()
-            slot_number = None
-            for slot in bike_details:
-                if bike_details[slot][2] == exit_plate:
-                    slot_number = slot
-                    break
-            if slot_number is not None:
-                elapsed_seconds = (datetime.datetime.now() - bike_parked_time[slot_number]).total_seconds()
-                elapsed_hours = elapsed_seconds / 3600
-                if elapsed_hours <= 1:
-                    amount = config.first_hour_rate
-                    print(f"The amount to be paid is : {amount}")
-                else:
-                    amount = config.first_hour_rate + int(elapsed_hours - 1) * config.per_hour_rate
-                    print(f"The amount to be paid is : {amount}")
+    found_key = None
 
-                with open("report.csv", "a", newline="") as file:
-                    writer = csv.writer(file)
-                    brand, model, licence_plate = bike_details[slot_number]
-                    writer.writerow(["bike", slot_number, brand, model, licence_plate,
-                                     bike_parked_time[slot_number].strftime("%Y-%m-%d %H-%M-%S"),
-                                     datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S"), amount])
 
-                bike_slots[slot_number] = None
-                del bike_details[slot_number]
-                del bike_parked_time[slot_number]
-                save_bike_parking()
-                print("Thank you for using our parking!")
-                break
-            else:
-                print("No bike with this licence plate was found")
+    #Search for the vehicle
+    for parking_key, details in parking_details.items():
 
+        if parking_key[2] == vehicle_type and details[2] == exit_plate:
+            found_key = parking_key
+            break
+
+
+    #Check whether vehicle was found
+    if found_key is None:
+        print("No vehicle with this licence plate was found")
+        return
+
+
+    #Get parking information
+
+    floor, section, vehicle, slot = found_key
+
+    brand, model, licence_plate = parking_details[found_key]
+
+
+    parked_time = parking_parked_time[found_key]
+    exit_time = datetime.datetime.now()
+
+    elapsed_seconds = (exit_time - parked_time).total_seconds()
+    elapsed_hours = elapsed_seconds / 3600
+
+    if elapsed_hours <= 1:
+        amount = config.first_hour_rate
     else:
-        print("Invalid input")
+        extra_hours = int(elapsed_hours - 1) + 1
+        amount = config.first_hour_rate + extra_hours * config.per_hour_rate
 
-load_car_parking()
-load_bike_parking()
+
+    print("\n========== EXIT BILL ==========")
+    print(f"Vehicle Type : {vehicle}")
+    print(f"Floor        : {floor}")
+    print(f"Section      : {section}")
+    print(f"Slot Number  : {slot}")
+    print(f"Licence Plate: {licence_plate}")
+    print(f"Parking Fee  : {amount}")
+    print("===============================")
+
+    with open("report.csv", "a", newline = "") as file:
+        writer = csv.writer(file)
+        writer.writerow([
+            vehicle, floor, section, slot,
+            brand, model, licence_plate,
+            parked_time.strftime("%Y-%m-%d %H:%M:%S"),
+            exit_time.strftime("%Y-%m-%d %H:%M:%S"),
+            amount
+        ])
+
+    #Free the parking slot
+    parking_slots[floor][section][vehicle][slot] = None
+
+    del parking_details[found_key]
+    del parking_parked_time[found_key]
+
+    save_parking()
+
+    print("Thank you for using our parking!")
+
+load_parking()
 
 while True:
     choice = main_menu()
